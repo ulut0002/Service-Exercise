@@ -1,0 +1,62 @@
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+html {
+  font-size: 20px;
+  font-family: sans-serif;
+}
+header {
+  min-height: 12rem;
+  padding: 1rem 3rem;
+  background-color: #ddd;
+  /* background: TODO: Add a nice background image that will cover the header; */
+}
+header h1 {
+  font-family: sans-serif;
+  color: #222;
+  text-shadow: 1px 1px 2px #fff;
+  font-size: 3rem;
+  font-weight: 500;
+}
+h1 .offline {
+  /* color: ; TODO: add a bright colour for the message */
+}
+main {
+  font-weight: 100;
+  padding: 1rem 3rem;
+}
+main > * {
+  clear: both;
+}
+main p {
+  margin-block: 1rem;
+  line-height: 1.8;
+  color: #333;
+}
+main ol li {
+  list-style-position: inside;
+  line-height: 1.7;
+  display: flex;
+  justify-content: space-between;
+  width: clamp(25ch, 50vw, 700px);
+}
+main ol {
+  margin-block: 1rem;
+}
+p img {
+  float: left;
+  margin: 0 1rem 1rem 0;
+  min-width: 200px;
+  width: clamp(200px, 50%, 500px);
+}
+main :is(h2, h3) {
+  padding-block: 1rem;
+  font-weight: 300;
+  /* color: ; TODO: Use a custom colour for your headings */
+  border-top: 1px solid #ddd;
+}
+main :first-child {
+  border: none;
+}
