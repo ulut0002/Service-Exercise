@@ -1,5 +1,5 @@
 const APP = {
-  isOnline: 'onLine' in navigator && navigator.onLine,
+  isOnline: "onLine" in navigator && navigator.onLine,
   init() {
     APP.registerWorker();
     APP.addListeners();
@@ -10,10 +10,10 @@ const APP = {
     //TODO: listen for the online and offline events and update the message in the header span
   },
   getTopScores() {
-    let url = 'https://jsonplaceholder.typicode.com/users';
+    let url = "https://jsonplaceholder.typicode.com/users";
     fetch(url, {
-      method: 'get',
-      headers: { accept: 'application/json,text/json' },
+      method: "get",
+      headers: { accept: "application/json,text/json" },
     })
       .then((resp) => {
         if (!resp.ok) throw new Error(resp.statusText);
@@ -31,7 +31,7 @@ const APP = {
             return a.score - b.score;
           });
 
-        const list = document.getElementById('scorelist');
+        const list = document.getElementById("scorelist");
         //TODO: build the list items inside scorelist with name and score plus a data- prop for the id
       })
       .catch(APP.handleError);
@@ -39,6 +39,9 @@ const APP = {
   registerWorker() {
     //TODO: check if serviceworkers are supported
     //TODO: register the sw.js file
+    if (navigator.serviceWorker) {
+      navigator.serviceWorker.register("./sw.js");
+    }
   },
   handleError(err) {
     //TODO: output fetch errors to the page somewhere
@@ -46,4 +49,4 @@ const APP = {
   },
 };
 
-document.addEventListener('DOMContentLoaded', APP.init);
+document.addEventListener("DOMContentLoaded", APP.init);

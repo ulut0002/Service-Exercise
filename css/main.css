@@ -1,3 +1,5 @@
+/* @import url("https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Sono:wght@400;700&display=swap"); */
+
 * {
   box-sizing: border-box;
   padding: 0;
@@ -5,7 +7,7 @@
 }
 html {
   font-size: 20px;
-  font-family: sans-serif;
+  font-family: Sono, sans-serif;
 }
 header {
   min-height: 12rem;
@@ -14,7 +16,7 @@ header {
   /* background: TODO: Add a nice background image that will cover the header; */
 }
 header h1 {
-  font-family: sans-serif;
+  font-family: "Abril Fatface", sans-serif;
   color: #222;
   text-shadow: 1px 1px 2px #fff;
   font-size: 3rem;
