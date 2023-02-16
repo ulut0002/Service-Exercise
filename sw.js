@@ -1,23 +1,16 @@
 const version = 1;
 const cacheName = `ulut0002-service-worker.${version}`;
+let cacheRef = undefined;
 let isOnline = true;
 
-const cacheItems = [
-  //css
-  //TODO: add the css, fonts, html, and js links to the cache array
-  //fonts
-
-  //html
-  "/",
-  "./index.html",
-  "./css/main.css",
-  "./js/app.js",
-  //all images and fetched json are to be dynamically be added to this array
-];
+const cacheItems = ["/", "./index.html", "./css/main.css", "./js/app.js"];
 
 self.addEventListener("install", (ev) => {
   ev.waitUntil(
-    caches.open(cacheName).then((cache) => cache.addAll(cacheItems))
+    caches.open(cacheName).then((cache) => {
+      cacheRef = cache;
+      cache.addAll(cacheItems);
+    })
   );
 });
 
@@ -42,70 +35,56 @@ self.addEventListener("fetch", (ev) => {
   let queryString = new URLSearchParams(url.search); //turn query string into an Object
   let isOnline = navigator.onLine; //determine if the browser is currently offline
   let urlPath = url.pathname.toLowerCase();
-  let isImage =
+  const isImage =
     urlPath.includes(".png") ||
     urlPath.includes(".jpg") ||
     urlPath.includes(".svg") ||
     urlPath.includes(".gif") ||
     urlPath.includes(".webp") ||
     urlPath.includes(".jpeg") ||
-    url.hostname.includes("picsum.photos"); //check file extension or location
+    url.hostname.includes("picsum.photos");
 
-  let isFont = urlPath.includes(".woff2");
-  let isCSS = urlPath.includes(".css");
-
-  let selfLocation = new URL(self.location);
-  //determine if the requested file is from the same origin as your website
-  let isRemote = selfLocation.origin !== url.origin;
-
+  const isFont = urlPath.includes(".woff2");
+  const isCSS = urlPath.includes(".css");
   const inCacheList = cacheItems.indexOf(ev.request.url) >= 0;
   let forceCacheCheck = false;
   if (isFont || isCSS || isImage || inCacheList) {
     forceCacheCheck = true;
   }
 
+  //Anything else is JSON
+  const isJSON = !forceCacheCheck;
+
+  let selfLocation = new URL(self.location);
+  //determine if the requested file is from the same origin as your website
+  let isRemote = selfLocation.origin !== url.origin;
+
+  if (urlPath.includes("https")) {
+    // console.log(urlPath);
+  }
+  console.log("request to: ", urlPath);
+
   if (isOnline) {
-    if (forceCacheCheck) {
-      ev.respondWith(cacheFirst(ev));
+    if (isJSON) {
+      //For JSON requests attempt the fetch first. Then update the cache with the latest copy and return the response.
+      // console.log(url);
+      ev.respondWith(networkFirst(ev));
+    } else if (forceCacheCheck) {
+      //For html, css, fonts, js, and images check the cache first and return that
+      //if not in the cache then do a fetch call to retrieve it
+      //after a successful fetch, clone the response and put( ) it into the cache before returning the response.
+      ev.respondWith(staleWhileRevalidate(ev));
     } else {
-      ev.respondWith(networkOnly(ev));
+      ev.respondWith(cacheFirst(ev));
     }
   } else {
     // not online
+    // Check if the navigator is online for the JSON fetch. If offline then return the cached JSON.
+
+    ev.respondWith(cacheFirst(ev));
   }
 
   return;
-
-  if (isOnline) {
-    if (isRemote) {
-      if (forceCacheCheck) {
-        if (isFont) {
-          console.log("font is here");
-        }
-        return ev.respondWith(staleWhileRevalidate(ev));
-      } else {
-        return ev.respondWith(networkFirst(ev));
-      }
-    } else {
-      if (isFont) {
-        console.log("font is here2");
-      }
-      if (forceCacheCheck) {
-        return ev.respondWith(cacheFirst(ev));
-      } else {
-        return ev.respondWith(staleWhileRevalidate(ev));
-      }
-    }
-  } else {
-  }
-
-  //TODO:
-  //For html, css, fonts, js, and images check the cache first and return that
-  //if not in the cache then do a fetch call to retrieve it
-  //after a successful fetch, clone the response and put( ) it into the cache before returning the response.
-  //use NetworkError when fetches fail.
-  //For JSON requests attempt the fetch first. Then update the cache with the latest copy and return the response.
-  //Check if the navigator is online for the JSON fetch. If offline then return the cached JSON.
 });
 
 self.addEventListener("message", (ev) => {
@@ -129,47 +108,62 @@ class NetworkError extends Error {
 
 function cacheFirst(ev) {
   //try cache then fetch
-  return caches.match(ev.request).then((cacheResponse) => {
-    return cacheResponse || fetch(ev.request);
-  });
+  let cacheResponse;
+  if (cacheRef) cacheResponse = cacheRef.match(ev.request);
+  return cacheResponse || fetch(ev.request);
 }
 
 function cacheOnly(ev) {
-  //only the response from the cache
-  return caches.match(ev.request);
+  if (cacheRef) return cacheRef.match(ev.request);
+  return undefined;
 }
 
 function networkFirst(ev) {
   //try fetch then cache
   return fetch(ev.request).then((response) => {
-    if (!response.ok) return caches.match(ev.request);
+    // if response is not ok, return cache value (if exists)
+    if (!response.ok) {
+      if (cacheRef) {
+        return cacheRef.match(ev.request);
+      }
+      return undefined;
+    }
+
+    //update the cache
+    if (cacheRef && response) cacheRef.put(ev.request, response.clone());
+
     return response;
   });
 }
 
 function networkOnly(ev) {
-  //only the result of a fetch
   return fetch(ev.request);
 }
 
-// This returns the cached version first, and then do another fetch to get the latest data.
 function staleWhileRevalidate(ev) {
-  //return cache then fetch and save latest fetch
-  return caches.match(ev.request).then((cacheResponse) => {
-    let fetchResponse = fetch(ev.request).then((response) => {
-      caches.open(cacheName).then((cache) => {
-        cache.put(ev.request, response.clone());
-        return response;
+  let cacheMatch = undefined;
+  let fetchResponse = fetch(ev.request);
+
+  if (cacheRef) {
+    cacheMatch = cacheRef.match(ev.request).then((response) => {
+      fetchResponse.then((res) => {
+        cacheRef.put(ev.request, res.clone());
       });
+      return response;
     });
-    return cacheResponse || fetchResult;
-  });
+  } else {
+    // no operation
+  }
+
+  return cacheMatch || fetchResponse;
 }
 
 function networkFirstAndRevalidate(ev) {
   //attempt fetch and cache result too
   return fetch(ev.request).then((response) => {
-    if (!response.ok) return caches.match(ev.request);
+    if (!response.ok) {
+      if (cacheRef) return cacheRef.match(ev.request);
+    }
     return response;
   });
 }

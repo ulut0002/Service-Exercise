@@ -1,13 +1,26 @@
 const APP = {
-  isOnline: "onLine" in navigator && navigator.onLine,
+  isOnline() {
+    return "onLine" in navigator && navigator.onLine;
+  },
+  dom: {
+    offlineEl: undefined,
+  },
   init() {
+    APP.readDOM();
     APP.registerWorker();
     APP.addListeners();
     APP.getTopScores();
   },
+  readDOM() {
+    APP.dom.offlineEl = document.querySelector("h1 .offline");
+  },
   addListeners() {
-    //TODO: display a CURRENTLY OFFLINE message in the header span if the page is loaded offline
-    //TODO: listen for the online and offline events and update the message in the header span
+    // display a CURRENTLY OFFLINE message in the header span if the page is loaded offline
+    APP.updateOnlineStatus();
+
+    //listen for the online and offline events and update the message in the header span
+    window.addEventListener("offline", APP.updateOnlineStatus);
+    window.addEventListener("online", APP.updateOnlineStatus);
   },
   getTopScores() {
     let url = "https://jsonplaceholder.typicode.com/users";
@@ -37,8 +50,6 @@ const APP = {
       .catch(APP.handleError);
   },
   registerWorker() {
-    //TODO: check if serviceworkers are supported
-    //TODO: register the sw.js file
     if (navigator.serviceWorker) {
       navigator.serviceWorker.register("./sw.js");
     }
@@ -46,6 +57,18 @@ const APP = {
   handleError(err) {
     //TODO: output fetch errors to the page somewhere
     console.warn(err.message);
+  },
+  updateOnlineStatus() {
+    console.log("online? : ", APP.isOnline());
+    if (APP.dom.offlineEl) {
+      APP.dom.offlineEl.textContent = APP.isOnline() ? "" : "Offline";
+    }
+  },
+  onMessage({ data }) {},
+  sendMessage(msg) {
+    if (navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage(msg);
+    }
   },
 };
 

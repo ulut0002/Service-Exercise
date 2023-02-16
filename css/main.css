@@ -1,5 +1,3 @@
-/* @import url("https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Sono:wght@400;700&display=swap"); */
-
 * {
   box-sizing: border-box;
   padding: 0;
@@ -13,7 +11,10 @@ header {
   min-height: 12rem;
   padding: 1rem 3rem;
   background-color: #ddd;
-  /* background: TODO: Add a nice background image that will cover the header; */
+  /* https://unsplash.com/photos/9AqIdzEc9pY  by CHUTTERSNAP*/
+  background-image: url("../img/background.jpg");
+  background-position: 50% 70%;
+  background-size: cover;
 }
 header h1 {
   font-family: "Abril Fatface", sans-serif;
@@ -24,6 +25,11 @@ header h1 {
 }
 h1 .offline {
   /* color: ; TODO: add a bright colour for the message */
+  color: #6a0505;
+}
+
+h1 .offline:empty {
+  display: none;
 }
 main {
   font-weight: 100;
