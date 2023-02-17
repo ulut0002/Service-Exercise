@@ -87,7 +87,7 @@ self.addEventListener("fetch", (ev) => {
   //determine if the requested file is from the same origin as your website
   let isRemote = selfLocation.origin !== url.origin;
 
-  isJSON = true;
+  // isJSON = true;
 
   if (isOnline) {
     if (isJSON) {
