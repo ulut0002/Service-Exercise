@@ -3,7 +3,13 @@ const cacheName = `ulut0002-service-worker.${version}`;
 let cacheRef = undefined;
 let isOnline = true;
 
-const cacheItems = ["/", "./index.html", "./css/main.css", "./js/app.js"];
+const cacheItems = [
+  "/",
+  "./index.html",
+  "./css/main.css",
+  "./js/app.js",
+  "./img/favicon.png",
+];
 
 //This function is here because of a failed test:
 // 1. Run the app

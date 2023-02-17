@@ -18,12 +18,13 @@ const APP = {
     // APP.handleError(new Error("Fetch has failed. Try again"));
   },
   addListeners() {
-    // display a CURRENTLY OFFLINE message in the header span if the page is loaded offline
-    APP.updateOnlineStatus();
-
     //listen for the online and offline events and update the message in the header span
     window.addEventListener("offline", APP.updateOnlineStatus);
     window.addEventListener("online", APP.updateOnlineStatus);
+
+    // display a CURRENTLY OFFLINE message in the header span if the page is loaded offline
+
+    APP.updateOnlineStatus();
   },
   getTopScores() {
     let url = "https://jsonplaceholder.typicode.com/users";
