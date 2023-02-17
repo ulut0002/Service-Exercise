@@ -7,6 +7,9 @@ html {
   font-size: 20px;
   font-family: Sono, sans-serif;
 }
+body {
+  position: relative;
+}
 header {
   min-height: 12rem;
   padding: 1rem 3rem;
@@ -67,4 +70,42 @@ main :is(h2, h3) {
 }
 main :first-child {
   border: none;
+}
+
+.notice_container {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+
+  color: white;
+  opacity: 0.5;
+  row-gap: 0.5rem;
+}
+
+.notice {
+  background-color: #6a0505;
+  max-width: 20rem;
+  font-size: 0.883rem;
+  padding: 0.75rem 1rem;
+  animation-name: disappearAnimation;
+  animation-duration: 3000ms;
+  animation-fill-mode: forwards;
+}
+
+/* Source: https://stackoverflow.com/questions/39513705/make-html-element-disappear-with-css-animation */
+@keyframes disappearAnimation {
+  0% {
+    opacity: 1;
+  }
+
+  80% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 0;
+    display: none;
+  }
 }

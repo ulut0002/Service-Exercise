@@ -4,6 +4,7 @@ const APP = {
   },
   dom: {
     offlineEl: undefined,
+    noticeContainerEl: undefined,
   },
   init() {
     APP.readDOM();
@@ -13,6 +14,8 @@ const APP = {
   },
   readDOM() {
     APP.dom.offlineEl = document.querySelector("h1 .offline");
+    APP.dom.noticeContainerEl = document.getElementById("notice_container");
+    // APP.handleError(new Error("Fetch has failed. Try again"));
   },
   addListeners() {
     // display a CURRENTLY OFFLINE message in the header span if the page is loaded offline
@@ -29,7 +32,10 @@ const APP = {
       headers: { accept: "application/json,text/json" },
     })
       .then((resp) => {
-        if (!resp.ok) throw new Error(resp.statusText);
+        if (!resp.ok) {
+          // console.log("fetch failed");
+          throw new Error(resp.statusText);
+        }
         return resp.json();
       })
       .then((users) => {
@@ -45,9 +51,17 @@ const APP = {
           });
 
         const list = document.getElementById("scorelist");
-        //TODO: build the list items inside scorelist with name and score plus a data- prop for the id
+
+        //build the list items inside scorelist with name and score plus a data- prop for the id
+        if (list) {
+          list.innerHTML = scores
+            .map((score) => {
+              return `<li data-id="${score.id}">${score.name} : ${score.score} </li>`;
+            })
+            .join(" ");
+        }
       })
-      .catch(APP.handleError);
+      .catch((err) => APP.handleError(err));
   },
   registerWorker() {
     if (navigator.serviceWorker) {
@@ -55,11 +69,17 @@ const APP = {
     }
   },
   handleError(err) {
-    //TODO: output fetch errors to the page somewhere
+    //output fetch errors to the page somewhere
+    // console.log("error caught", err.message);
+    if (APP.dom.noticeContainerEl) {
+      divEL = document.createElement("div");
+      divEL.classList.add("notice");
+      divEL.innerHTML = err.message;
+      APP.dom.noticeContainerEl.insertAdjacentElement("beforeend", divEL);
+    }
     console.warn(err.message);
   },
   updateOnlineStatus() {
-    console.log("online? : ", APP.isOnline());
     if (APP.dom.offlineEl) {
       APP.dom.offlineEl.textContent = APP.isOnline() ? "" : "Offline";
     }

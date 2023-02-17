@@ -5,10 +5,23 @@ let isOnline = true;
 
 const cacheItems = ["/", "./index.html", "./css/main.css", "./js/app.js"];
 
+//This function is here because of a failed test:
+// 1. Run the app
+// 2. Delete the cache manually
+// getCache() will make sure that we create cache each time we call it
+// so that cacheRef will never be undefined
+async function getCache() {
+  if (cacheRef && caches.has(cacheName)) return cacheRef;
+
+  return caches.open(cacheName).then((cache) => {
+    cacheRef = cache;
+    return cache;
+  });
+}
+
 self.addEventListener("install", (ev) => {
   ev.waitUntil(
-    caches.open(cacheName).then((cache) => {
-      cacheRef = cache;
+    getCache().then((cache) => {
       cache.addAll(cacheItems);
     })
   );
@@ -44,46 +57,33 @@ self.addEventListener("fetch", (ev) => {
     urlPath.includes(".jpeg") ||
     url.hostname.includes("picsum.photos");
 
-  const isFont = urlPath.includes(".woff2");
+  const isFont =
+    urlPath.includes(".woff2") || urlPath.includes("fonts.gstatic.com");
+
   const isCSS = urlPath.includes(".css");
+
   const inCacheList = cacheItems.indexOf(ev.request.url) >= 0;
-  let forceCacheCheck = false;
-  if (isFont || isCSS || isImage || inCacheList) {
-    forceCacheCheck = true;
-  }
 
   //Anything else is JSON
-  const isJSON = !forceCacheCheck;
+  let isJSON = !(isFont || isCSS || isImage || inCacheList);
 
   let selfLocation = new URL(self.location);
   //determine if the requested file is from the same origin as your website
   let isRemote = selfLocation.origin !== url.origin;
 
-  if (urlPath.includes("https")) {
-    // console.log(urlPath);
-  }
-  console.log("request to: ", urlPath);
+  isJSON = true;
 
   if (isOnline) {
     if (isJSON) {
-      //For JSON requests attempt the fetch first. Then update the cache with the latest copy and return the response.
-      // console.log(url);
       ev.respondWith(networkFirst(ev));
-    } else if (forceCacheCheck) {
-      //For html, css, fonts, js, and images check the cache first and return that
-      //if not in the cache then do a fetch call to retrieve it
-      //after a successful fetch, clone the response and put( ) it into the cache before returning the response.
-      ev.respondWith(staleWhileRevalidate(ev));
     } else {
       ev.respondWith(cacheFirst(ev));
     }
   } else {
     // not online
     // Check if the navigator is online for the JSON fetch. If offline then return the cached JSON.
-
     ev.respondWith(cacheFirst(ev));
   }
-
   return;
 });
 
@@ -106,32 +106,65 @@ class NetworkError extends Error {
   }
 }
 
+// source: https://developer.chrome.com/docs/workbox/caching-strategies-overview/
+// The request hits the cache. If the asset is in the cache, serve it from there.
+// If the request is not in the cache, go to the network.
+// Once the network request finishes, add it to the cache, then return the response from the network.
 function cacheFirst(ev) {
-  //try cache then fetch
-  let cacheResponse;
-  if (cacheRef) cacheResponse = cacheRef.match(ev.request);
-  return cacheResponse || fetch(ev.request);
+  let cacheResponse = getCache()
+    .then((cache) => {
+      return cache.match(ev.request);
+    })
+    .then((result) => {
+      if (result) {
+        return result;
+      }
+      //the request is not in the cache
+      // so fetch it, and record it in cache, and return it
+      return fetch(ev.request.url).then((response) => {
+        if (!response.ok) return createEmptyResponse();
+        return getCache().then((cache) => {
+          return cache.put(ev.request, response.clone());
+        });
+      });
+    })
+    .catch((err) => {
+      return createEmptyResponse();
+    });
 }
 
-function cacheOnly(ev) {
-  if (cacheRef) return cacheRef.match(ev.request);
-  return undefined;
-}
+//source: https://developer.chrome.com/docs/workbox/caching-strategies-overview/  "Network first, falling back to cache"
+// You go to the network first for a request, and place the response in the cache.
+// If you're offline at a later point, you fall back to the latest version of that response in the cache.
 
 function networkFirst(ev) {
-  //try fetch then cache
-  return fetch(ev.request).then((response) => {
-    // if response is not ok, return cache value (if exists)
+  // console.log("here");
+  return fetch(ev.request.url).then((response) => {
     if (!response.ok) {
-      if (cacheRef) {
-        return cacheRef.match(ev.request);
-      }
-      return undefined;
+      //if fetch response is not good, return the cached version
+      return getCache()
+        .then((cache) => {
+          if (!cache) return createEmptyResponse();
+          return cache.match(ev);
+        })
+        .then((response) => {
+          if (!response) return createEmptyResponse();
+          return response;
+        })
+        .catch((err) => {
+          return createEmptyResponse();
+        });
     }
-
-    //update the cache
-    if (cacheRef && response) cacheRef.put(ev.request, response.clone());
-
+    // response is ok. Put the cloned version in cache and return it.
+    const cloneVersion = response.clone();
+    getCache()
+      .then((cache) => {
+        // console.log("right");
+        return cache.put(ev.request, cloneVersion);
+      })
+      .catch((err) => {
+        return createEmptyResponse();
+      });
     return response;
   });
 }
@@ -140,30 +173,22 @@ function networkOnly(ev) {
   return fetch(ev.request);
 }
 
-function staleWhileRevalidate(ev) {
-  let cacheMatch = undefined;
-  let fetchResponse = fetch(ev.request);
-
-  if (cacheRef) {
-    cacheMatch = cacheRef.match(ev.request).then((response) => {
-      fetchResponse.then((res) => {
-        cacheRef.put(ev.request, res.clone());
-      });
-      return response;
-    });
-  } else {
-    // no operation
-  }
-
-  return cacheMatch || fetchResponse;
+function cacheOnly(ev) {
+  return getCache().then((cache) => {
+    if (!cache) return createEmptyResponse();
+    return cache.match(ev.request);
+  });
 }
 
-function networkFirstAndRevalidate(ev) {
-  //attempt fetch and cache result too
-  return fetch(ev.request).then((response) => {
-    if (!response.ok) {
-      if (cacheRef) return cacheRef.match(ev.request);
-    }
-    return response;
-  });
+//source: chatGPT
+// question: in Vanilla JS, how can create a response object that has json data, that contains an empty array?
+function createEmptyResponse() {
+  const response = {
+    statusCode: 200,
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify([]),
+  };
+  return response;
 }
