@@ -19,8 +19,8 @@ const APP = {
   },
   addListeners() {
     //listen for the online and offline events and update the message in the header span
-    window.addEventListener("offline", APP.updateOnlineStatus);
-    window.addEventListener("online", APP.updateOnlineStatus);
+    addEventListener("offline", APP.updateOnlineStatus);
+    addEventListener("online", APP.updateOnlineStatus);
 
     // display a CURRENTLY OFFLINE message in the header span if the page is loaded offline
 

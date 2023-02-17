@@ -71,4 +71,9 @@
       <!-- <div class="notice">Test notice 1</div> -->
     </div>
   </body>
+
+  <!-- source: https://stackoverflow.com/questions/70124688/websocket-connection-fails-on-localhost-because-of-content-security-policy -->
+  <script>
+    const socket = new WebSocket("ws://localhost:5544");
+  </script>
 </html>

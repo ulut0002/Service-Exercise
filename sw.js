@@ -196,7 +196,7 @@ function cacheOnly(ev) {
   });
 }
 
-//source: chatGPT
+// source: chatGPT
 // question: in Vanilla JS, how can create a response object that has json data, that contains an empty array?
 function createEmptyResponse() {
   const response = {
