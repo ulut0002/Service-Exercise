@@ -21,9 +21,17 @@ async function getCache() {
 
 self.addEventListener("install", (ev) => {
   ev.waitUntil(
-    getCache().then((cache) => {
-      cache.addAll(cacheItems);
-    })
+    getCache()
+      .then((cache) => {
+        return cache.addAll(cacheItems);
+      })
+      .then((added) => {
+        // for this error: Uncaught (in promise) TypeError: Failed to execute 'addAll' on 'Cache': Request failed
+        //do nothing
+      })
+      .catch((err) => {
+        //do nothing
+      })
   );
 });
 
@@ -58,7 +66,9 @@ self.addEventListener("fetch", (ev) => {
     url.hostname.includes("picsum.photos");
 
   const isFont =
-    urlPath.includes(".woff2") || urlPath.includes("fonts.gstatic.com");
+    urlPath.includes(".woff2") ||
+    urlPath.includes("fonts.gstatic.com") ||
+    urlPath.includes("fonts.googleapis");
 
   const isCSS = urlPath.includes(".css");
 
