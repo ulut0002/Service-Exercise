@@ -80,7 +80,7 @@ main :first-child {
   flex-direction: column;
 
   color: white;
-  opacity: 0.5;
+  opacity: 1;
   row-gap: 0.5rem;
 }
 
@@ -90,7 +90,7 @@ main :first-child {
   font-size: 0.883rem;
   padding: 0.75rem 1rem;
   animation-name: disappearAnimation;
-  animation-duration: 3000ms;
+  animation-duration: 4500ms;
   animation-fill-mode: forwards;
 }
 
@@ -101,7 +101,7 @@ main :first-child {
   }
 
   80% {
-    opacity: 0.5;
+    opacity: 1;
   }
 
   100% {

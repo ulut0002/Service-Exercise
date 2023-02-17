@@ -8,13 +8,13 @@ const cacheItems = [
   "./index.html",
   "./css/main.css",
   "./js/app.js",
-  "./img/favicon.png",
+  "./img/favicon.png", // added to dismiss live server error
 ];
 
-//This function is here because of a failed test:
+//This function is here because of a failed test during development:
 // 1. Run the app
 // 2. Delete the cache manually
-// getCache() will make sure that we create cache each time we call it
+// getCache() will make sure that a cache exists
 // so that cacheRef will never be undefined
 async function getCache() {
   if (cacheRef && caches.has(cacheName)) return cacheRef;
@@ -32,7 +32,8 @@ self.addEventListener("install", (ev) => {
         return cache.addAll(cacheItems);
       })
       .then((added) => {
-        // for this error: Uncaught (in promise) TypeError: Failed to execute 'addAll' on 'Cache': Request failed
+        // Because of this error:
+        // Uncaught (in promise) TypeError: Failed to execute 'addAll' on 'Cache': Request failed
         //do nothing
       })
       .catch((err) => {
@@ -96,22 +97,11 @@ self.addEventListener("fetch", (ev) => {
       ev.respondWith(cacheFirst(ev));
     }
   } else {
-    // not online
     // Check if the navigator is online for the JSON fetch. If offline then return the cached JSON.
     ev.respondWith(cacheFirst(ev));
   }
   return;
 });
-
-self.addEventListener("message", (ev) => {
-  //message received from the web pages that use the service worker
-  //this is optional
-});
-
-function sendMessage(msg, clientId) {
-  //send a message to one or all clients
-  //this is optional
-}
 
 class NetworkError extends Error {
   constructor(msg, response) {
@@ -127,26 +117,38 @@ class NetworkError extends Error {
 // If the request is not in the cache, go to the network.
 // Once the network request finishes, add it to the cache, then return the response from the network.
 function cacheFirst(ev) {
-  let cacheResponse = getCache()
+  let cacheResult, fetchResult;
+
+  // if cache returns nothing, then fetch will be initialized
+  let initFetch = false;
+
+  cacheResult = getCache()
     .then((cache) => {
       return cache.match(ev.request);
     })
     .then((result) => {
-      if (result) {
-        return result;
-      }
-      //the request is not in the cache
-      // so fetch it, and record it in cache, and return it
-      return fetch(ev.request.url).then((response) => {
-        if (!response.ok) return createEmptyResponse();
-        return getCache().then((cache) => {
-          return cache.put(ev.request, response.clone());
-        });
-      });
+      if (!result) initFetch = true;
+      return result;
     })
     .catch((err) => {
-      return createEmptyResponse();
+      //return undefined, and make sure "fetch" runs next in line
+      initFetch = true;
+      return undefined;
     });
+
+  // init fetch only if the cache has failed
+  if (initFetch) {
+    fetchResult = fetch(ev.request.url).then((response) => {
+      if (!response.ok) return undefined;
+      return getCache().then((cache) => {
+        const clone = response.clone();
+        cache.put(ev.request, clone);
+        return response;
+      });
+    });
+  }
+
+  return cacheResult || fetchResult || createEmptyResponse();
 }
 
 //source: https://developer.chrome.com/docs/workbox/caching-strategies-overview/  "Network first, falling back to cache"
@@ -154,35 +156,42 @@ function cacheFirst(ev) {
 // If you're offline at a later point, you fall back to the latest version of that response in the cache.
 
 function networkFirst(ev) {
-  // console.log("here");
-  return fetch(ev.request.url).then((response) => {
-    if (!response.ok) {
-      //if fetch response is not good, return the cached version
-      return getCache()
+  let fetchResult, cacheResult;
+
+  fetchResult = fetch(ev.request.url)
+    .then((response) => {
+      // if response is not ok, throw an error and seek the response in cache
+      if (!response.ok)
+        throw new NetworkError(`Fetch to ${ev.request.url} failed`, response);
+
+      //response is good, so save the clone in the cache for the next run
+      getCache().then((cache) => {
+        const clone = response.clone();
+        cache.put(ev.request, clone);
+      });
+
+      // return the network response
+      return response;
+    })
+    .catch((err) => {
+      // fetch has failed. Check the cache and  test errors in each step
+      // if there is an error condition, return an empty response
+      // if a value is found in cache, return the found value
+
+      cacheResult = getCache()
         .then((cache) => {
           if (!cache) return createEmptyResponse();
-          return cache.match(ev);
+          return cache.match(ev.request);
         })
-        .then((response) => {
-          if (!response) return createEmptyResponse();
-          return response;
+        .then((result) => {
+          return result;
         })
         .catch((err) => {
           return createEmptyResponse();
         });
-    }
-    // response is ok. Put the cloned version in cache and return it.
-    const cloneVersion = response.clone();
-    getCache()
-      .then((cache) => {
-        // console.log("right");
-        return cache.put(ev.request, cloneVersion);
-      })
-      .catch((err) => {
-        return createEmptyResponse();
-      });
-    return response;
-  });
+    });
+
+  return fetchResult || cacheResult;
 }
 
 function networkOnly(ev) {

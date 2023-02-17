@@ -28,14 +28,14 @@ const APP = {
   },
   getTopScores() {
     let url = "https://jsonplaceholder.typicode.com/users";
+    // url = "https://jsonplaceholder.typicode.com/userss";
     fetch(url, {
       method: "get",
       headers: { accept: "application/json,text/json" },
     })
       .then((resp) => {
         if (!resp.ok) {
-          // console.log("fetch failed");
-          throw new Error(resp.statusText);
+          throw new Error(`Failed to fetch users..`);
         }
         return resp.json();
       })
