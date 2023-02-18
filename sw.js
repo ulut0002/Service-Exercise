@@ -5,7 +5,7 @@ let isOnline = true;
 
 const cacheItems = [
   "/",
-  "/index.html",
+  "index.html",
   "/css/main.css",
   "/js/app.js",
   "/img/favicon.png", // added to dismiss live server error
