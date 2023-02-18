@@ -96,24 +96,35 @@ class NetworkError extends Error {
   }
 }
 
+async function openCache() {
+  return caches.open(cacheName).then((cache) => {
+    return cache;
+  });
+}
+
 // source: https://developer.chrome.com/docs/workbox/caching-strategies-overview/
 // The request hits the cache. If the asset is in the cache, serve it from there.
 // If the request is not in the cache, go to the network.
 // Once the network request finishes, add it to the cache, then return the response from the network.
 function cacheFirst(ev) {
-  return cacheRef.match(ev.request).then((cacheMatch) => {
-    const fetchResult = fetch(ev.request.url)
-      .then((response) => {
-        if (!response.ok) {
-          throw new NetworkError("Fetch has failed", response);
-        }
-        cacheRef.put(ev.request, response.clone()).catch((err) => {});
-        return response;
-      })
-      .catch((err) => {
-        return createEmptyResponse();
-      });
-    return cacheMatch || fetchResult;
+  return caches.open(cacheName).then((cache) => {
+    return cache.match(ev.request).then((cacheMatch) => {
+      const fetchResult = fetch(ev.request.url)
+        .then((response) => {
+          if (!response.ok) {
+            throw new NetworkError("Fetch has failed", response);
+          }
+          const clone = response.clone();
+          caches.open(cacheName).then((cache2) => {
+            return cache2.put(ev.request, clone).catch((err) => {});
+          });
+          return response;
+        })
+        .catch((err) => {
+          return createEmptyResponse();
+        });
+      return cacheMatch || fetchResult;
+    });
   });
 }
 
@@ -124,8 +135,11 @@ function networkFirst(ev) {
   return fetch(ev.request.url)
     .then((response) => {
       // if response is not ok, throw an error and seek the response in cache
+      const clone = response.clone();
       if (!response.ok) throw new NetworkError("Fetch has failed.", response);
-      cacheRef.put(ev.request, response.clone()).catch((err) => {});
+      caches.open(cacheName).then((cache) => {
+        cache.put(ev.request, clone).catch((err) => {});
+      });
       return response;
     })
     .catch((err) => {
@@ -133,26 +147,17 @@ function networkFirst(ev) {
       // if there is an error condition, return an empty response
       // if a value is found in cache, return the found value
 
-      cacheResult = cacheRef
-        .match(ev.request)
-        .then((cacheMatch) => {
-          if (cacheMatch) return cacheMatch;
-        })
-        .catch((err) => {
-          return createEmptyResponse();
-        });
+      cacheResult = caches.open(cacheName).then((cache) => {
+        return cache
+          .match(ev.request)
+          .then((cacheMatch) => {
+            if (cacheMatch) return cacheMatch;
+          })
+          .catch((err) => {
+            return createEmptyResponse();
+          });
+      });
     });
-}
-
-//not used
-function networkOnly(ev) {
-  return fetch(ev.request);
-}
-
-//not used
-function cacheOnly(ev) {
-  if (!cacheRef) return createEmptyResponse();
-  return cacheRef.match(ev.request);
 }
 
 function createEmptyResponse() {
