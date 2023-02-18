@@ -41,6 +41,9 @@ const APP = {
       })
       .then((users) => {
         //add scores to each person
+
+        if (!Array.isArray(users)) throw new Error("Failed to fetch users..");
+
         let scores = users
           .map((user) => {
             let score = Math.floor(Math.random() * 100000) + 100000;
@@ -62,7 +65,7 @@ const APP = {
             .join(" ");
         }
       })
-      .catch((err) => APP.handleError(err));
+      .catch(APP.handleError);
   },
   registerWorker() {
     if (navigator.serviceWorker) {
@@ -75,10 +78,17 @@ const APP = {
     if (APP.dom.noticeContainerEl) {
       divEL = document.createElement("div");
       divEL.classList.add("notice");
-      divEL.innerHTML = err.message;
+      if (typeof err.text === "function") {
+        err.text().then((errorMessage) => {
+          divEL.innerHTML = errorMessage;
+        });
+      } else {
+        divEL.innerHTML = err.message;
+      }
+
       APP.dom.noticeContainerEl.insertAdjacentElement("beforeend", divEL);
     }
-    console.warn(err.message);
+    // console.warn(err.message);
   },
   updateOnlineStatus() {
     if (APP.dom.offlineEl) {

@@ -9,35 +9,21 @@ const cacheItems = [
   "./css/main.css",
   "./js/app.js",
   "./img/favicon.png", // added to dismiss live server error
+  "./img/background.jpg",
 ];
-
-//This function is here because of a failed test during development:
-// 1. Run the app
-// 2. Delete the cache manually
-// getCache() will make sure that a cache exists
-// so that cacheRef will never be undefined
-async function getCache() {
-  if (cacheRef && caches.has(cacheName)) return cacheRef;
-
-  return caches.open(cacheName).then((cache) => {
-    cacheRef = cache;
-    return cache;
-  });
-}
 
 self.addEventListener("install", (ev) => {
   ev.waitUntil(
-    getCache()
+    caches
+      .open(cacheName)
       .then((cache) => {
-        return cache.addAll(cacheItems);
-      })
-      .then((added) => {
-        // Because of this error:
-        // Uncaught (in promise) TypeError: Failed to execute 'addAll' on 'Cache': Request failed
-        //do nothing
+        cacheRef = cache;
+        cache.addAll(cacheItems).catch((err) => {
+          console.warn("Did not save everything in the cache");
+        });
       })
       .catch((err) => {
-        //do nothing
+        console.warn("Error with cache open");
       })
   );
 });
@@ -88,8 +74,6 @@ self.addEventListener("fetch", (ev) => {
   //determine if the requested file is from the same origin as your website
   let isRemote = selfLocation.origin !== url.origin;
 
-  // isJSON = true;
-
   if (isOnline) {
     if (isJSON) {
       ev.respondWith(networkFirst(ev));
@@ -117,38 +101,20 @@ class NetworkError extends Error {
 // If the request is not in the cache, go to the network.
 // Once the network request finishes, add it to the cache, then return the response from the network.
 function cacheFirst(ev) {
-  let cacheResult, fetchResult;
-
-  // if cache returns nothing, then fetch will be initialized
-  let initFetch = false;
-
-  cacheResult = getCache()
-    .then((cache) => {
-      return cache.match(ev.request);
-    })
-    .then((result) => {
-      if (!result) initFetch = true;
-      return result;
-    })
-    .catch((err) => {
-      //return undefined, and make sure "fetch" runs next in line
-      initFetch = true;
-      return undefined;
-    });
-
-  // init fetch only if the cache has failed
-  if (initFetch) {
-    fetchResult = fetch(ev.request.url).then((response) => {
-      if (!response.ok) return undefined;
-      return getCache().then((cache) => {
-        const clone = response.clone();
-        cache.put(ev.request, clone);
+  return cacheRef.match(ev.request).then((cacheMatch) => {
+    const fetchResult = fetch(ev.request.url)
+      .then((response) => {
+        if (!response.ok) {
+          throw new NetworkError("Fetch has failed", response);
+        }
+        cacheRef.put(ev.request, response.clone());
         return response;
+      })
+      .catch((err) => {
+        return createEmptyResponse();
       });
-    });
-  }
-
-  return cacheResult || fetchResult || createEmptyResponse();
+    return cacheMatch || fetchResult;
+  });
 }
 
 //source: https://developer.chrome.com/docs/workbox/caching-strategies-overview/  "Network first, falling back to cache"
@@ -156,21 +122,16 @@ function cacheFirst(ev) {
 // If you're offline at a later point, you fall back to the latest version of that response in the cache.
 
 function networkFirst(ev) {
-  let fetchResult, cacheResult;
+  // let fetchResult = undefined;
+  // let cacheResult = undefined;
 
-  fetchResult = fetch(ev.request.url)
+  return fetch(ev.request.url)
     .then((response) => {
       // if response is not ok, throw an error and seek the response in cache
-      if (!response.ok)
-        throw new NetworkError(`Fetch to ${ev.request.url} failed`, response);
+      if (!response.ok) throw new NetworkError("Fetch has failed.", response);
 
-      //response is good, so save the clone in the cache for the next run
-      getCache().then((cache) => {
-        const clone = response.clone();
-        cache.put(ev.request, clone);
-      });
+      cacheRef.put(ev.request, response.clone()).catch((err) => {});
 
-      // return the network response
       return response;
     })
     .catch((err) => {
@@ -178,20 +139,18 @@ function networkFirst(ev) {
       // if there is an error condition, return an empty response
       // if a value is found in cache, return the found value
 
-      cacheResult = getCache()
-        .then((cache) => {
-          if (!cache) return createEmptyResponse();
-          return cache.match(ev.request);
-        })
-        .then((result) => {
-          return result;
+      cacheResult = cacheRef
+        .match(ev.request)
+        .then((cacheMatch) => {
+          if (cacheMatch) return cacheMatch;
+          // return createEmptyResponse();
         })
         .catch((err) => {
           return createEmptyResponse();
         });
     });
 
-  return fetchResult || cacheResult;
+  // return fetchResult || cacheResult;
 }
 
 function networkOnly(ev) {
@@ -199,21 +158,17 @@ function networkOnly(ev) {
 }
 
 function cacheOnly(ev) {
-  return getCache().then((cache) => {
-    if (!cache) return createEmptyResponse();
-    return cache.match(ev.request);
-  });
+  if (!cacheRef) return createEmptyResponse();
+  return cacheRef.match(ev.request);
 }
 
 // source: chatGPT
 // question: in Vanilla JS, how can create a response object that has json data, that contains an empty array?
 function createEmptyResponse() {
-  const response = {
-    statusCode: 200,
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify([]),
-  };
-  return response;
+  const headers = new Headers();
+  headers.append("Content-Type", "application/json");
+
+  let json = JSON.stringify({});
+  let file = new File([json], "data.json", { type: "application/json" });
+  return new Response(file, { status: 200, statusText: "Ok", headers });
 }

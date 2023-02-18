@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src  'self'; 
+             img-src 'self' https://*;
+             script-src 'self' 'unsafe-inline';
+             style-src 'self' *.googleapis.com;
+             font-src 'self' fonts.gstatic.com;
+             connect-src 'self' *.github.com *.typicode.com;"
+    />
+
     <title>Service Worker Exercise</title>
 
     <!-- TODO: Add links to your web fonts here-->

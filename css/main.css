@@ -86,11 +86,11 @@ main :first-child {
 
 .notice {
   background-color: #6a0505;
-  max-width: 20rem;
+  /* max-width: 20rem; */
   font-size: 0.883rem;
   padding: 0.75rem 1rem;
   animation-name: disappearAnimation;
-  animation-duration: 4500ms;
+  animation-duration: 3500ms;
   animation-fill-mode: forwards;
 }
 
