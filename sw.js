@@ -67,7 +67,7 @@ self.addEventListener("fetch", (ev) => {
 
   const inCacheList = cacheItems.indexOf(ev.request.url) >= 0;
 
-  //Anything else is JSON
+  //Anything else is JSON, so it will be networkFirst by default
   let isJSON = !(isFont || isCSS || isImage || inCacheList);
 
   let selfLocation = new URL(self.location);
@@ -120,18 +120,12 @@ function cacheFirst(ev) {
 //source: https://developer.chrome.com/docs/workbox/caching-strategies-overview/  "Network first, falling back to cache"
 // You go to the network first for a request, and place the response in the cache.
 // If you're offline at a later point, you fall back to the latest version of that response in the cache.
-
 function networkFirst(ev) {
-  // let fetchResult = undefined;
-  // let cacheResult = undefined;
-
   return fetch(ev.request.url)
     .then((response) => {
       // if response is not ok, throw an error and seek the response in cache
       if (!response.ok) throw new NetworkError("Fetch has failed.", response);
-
       cacheRef.put(ev.request, response.clone()).catch((err) => {});
-
       return response;
     })
     .catch((err) => {
@@ -143,27 +137,24 @@ function networkFirst(ev) {
         .match(ev.request)
         .then((cacheMatch) => {
           if (cacheMatch) return cacheMatch;
-          // return createEmptyResponse();
         })
         .catch((err) => {
           return createEmptyResponse();
         });
     });
-
-  // return fetchResult || cacheResult;
 }
 
+//not used
 function networkOnly(ev) {
   return fetch(ev.request);
 }
 
+//not used
 function cacheOnly(ev) {
   if (!cacheRef) return createEmptyResponse();
   return cacheRef.match(ev.request);
 }
 
-// source: chatGPT
-// question: in Vanilla JS, how can create a response object that has json data, that contains an empty array?
 function createEmptyResponse() {
   const headers = new Headers();
   headers.append("Content-Type", "application/json");
