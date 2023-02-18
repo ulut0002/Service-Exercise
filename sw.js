@@ -5,11 +5,11 @@ let isOnline = true;
 
 const cacheItems = [
   "/",
-  "./index.html",
-  "./css/main.css",
-  "./js/app.js",
-  "./img/favicon.png", // added to dismiss live server error
-  "./img/background.jpg",
+  "/index.html",
+  "/css/main.css",
+  "/js/app.js",
+  "/img/favicon.png", // added to dismiss live server error
+  "/img/background.jpg",
 ];
 
 self.addEventListener("install", (ev) => {
@@ -107,7 +107,7 @@ function cacheFirst(ev) {
         if (!response.ok) {
           throw new NetworkError("Fetch has failed", response);
         }
-        cacheRef.put(ev.request, response.clone());
+        cacheRef.put(ev.request, response.clone()).catch((err) => {});
         return response;
       })
       .catch((err) => {
