@@ -4,12 +4,12 @@ let cacheRef = undefined;
 let isOnline = true;
 
 const cacheItems = [
-  "/",
-  "index.html",
-  "/css/main.css",
-  "/js/app.js",
-  "/img/favicon.png", // added to dismiss live server error
-  "/img/background.jpg",
+  ".",
+  "./index.html",
+  "./css/main.css",
+  "./js/app.js",
+  "./img/favicon.png", // added to dismiss live server error
+  "./img/background.jpg",
 ];
 
 self.addEventListener("install", (ev) => {
