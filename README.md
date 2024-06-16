@@ -4,6 +4,8 @@ This project is similar to YouTube's offline access feature. When there's no int
 
 This assignment demonstrates the use of service workers and the browser's cache storage. Even if the browser goes offline, images, fonts, and CSS files are stored within the cache. The site detects the offline status of the browser and displays an appropriate message when internet access is unavailable.
 
+https://ulut0002.github.io/Service-Exercise/
+
 ## Table of Contents
 
 - [Installation](#installation)
