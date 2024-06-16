@@ -26,12 +26,6 @@ To get started with this project, follow these steps:
    git clone https://github.com/ulut0002/Service-Exercise.git
    ```
 
-3. Install the dependencies:
-
-   ```bash
-   npm install
-   ```
-
 ## Usage
 
 After completing the installation steps, you can start the project with Live Server
